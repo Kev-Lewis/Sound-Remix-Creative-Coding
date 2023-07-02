@@ -1,0 +1,154 @@
+let song1, song2;
+let c;
+let playToggle = false;
+var cnv, soundFile, fft, peakDetect;
+var ellipseWidth = 10;
+var volhistory = [];
+let system;
+let length = 5;
+let widthToDraw = 3;
+function preload() {
+  song1 = loadSound("you_destructive.ogg");
+  song1.setVolume(0.2);
+}
+function setup() {
+  let cnv = createCanvas(windowWidth, windowHeight);
+  cnv.mouseClicked(togglePlay);
+  amplitude = new p5.Amplitude();
+  system = new ParticleSystem(createVector(width / 2, height / 2));
+}
+
+function draw() {
+  background(220);
+  text("tap to play", 20, 20);
+
+  fill(0);
+  stroke(255, 0, 0);
+  let level = amplitude.getLevel();
+  let size = map(level, 0, 1, 0, 200);
+
+  if (size * 5 < 5) {
+    ellipse(width / 2, height / 2, 5, 5);
+  } else {
+    ellipse(width / 2, height / 2, size * 5, size * 5);
+  }
+
+  if (size > 0 && size < 5) {
+    system.addParticle();
+    system.run(size * 5);
+  } else if (size >= 5) {
+    system.addParticle();
+    system.run(size * 10);
+  }
+
+  //https://www.youtube.com/watch?v=jEwAMgcCgOA
+  //  used this as reference
+  //  removed some things and changed a couple values
+  var vol = amplitude.getLevel();
+  volhistory.push(vol);
+  stroke(255);
+  noFill();
+  push();
+  var currentY = map(vol, 0, 0.5, height, 0);
+  translate(0, height / 2 - currentY);
+  beginShape();
+  for (var i = 0; i < volhistory.length; i++) {
+    var y = map(volhistory[i] * length, 0, 1, height, 0, true);
+    stroke(0, 0, 0);
+    vertex(i * widthToDraw, y);
+  }
+  endShape();
+  pop();
+  if (volhistory.length * widthToDraw > width) {
+    //origionally had -50 after width
+    volhistory.splice(0, 1);
+  }
+}
+
+function togglePlay() {
+  if (song1.isPlaying()) {
+    song1.pause();
+  } else {
+    song1.loop();
+    amplitude = new p5.Amplitude();
+    amplitude.setInput(song1);
+  }
+}
+
+//https://p5js.org/examples/simulate-particle-system.html
+//  used this as reference and then changed it so that it doesn't just go down
+//  also expriemented with colors but ended up scratching that
+//    didn't want to flashbang someones eyes
+// A simple Particle class
+let Particle = function (position) {
+  this.acceleration = createVector(0, random(-0.05, 0.05));
+  this.velocity = createVector(random(-2, 2), random(-1, 1) * random());
+  this.position = position.copy();
+  this.lifespan = 255;
+};
+
+Particle.prototype.run = function () {
+  this.update();
+  this.display();
+};
+
+// Method to update position
+Particle.prototype.update = function () {
+  this.velocity.add(this.acceleration);
+  this.position.add(this.velocity);
+  this.lifespan -= 2;
+};
+
+// Method to display
+Particle.prototype.display = function () {
+  stroke(200, this.lifespan);
+  strokeWeight(2);
+  newColor = color(256 * random(), 256 * random(), 256 * random());
+  fill(newColor, this.lifespan);
+  ellipse(this.position.x, this.position.y, 8, 8);
+};
+
+// Is the particle still useful?
+Particle.prototype.isDead = function () {
+  return this.lifespan < 0;
+};
+
+let ParticleSystem = function (position) {
+  this.origin = position.copy();
+  this.particles = [];
+};
+
+ParticleSystem.prototype.addParticle = function () {
+  this.particles.push(new Particle(this.origin));
+};
+
+ParticleSystem.prototype.run = function (level) {
+  for (let i = level; i >= 0; i--) {
+    let p = this.particles[int(i)];
+    p.run(i);
+    if (p.isDead()) {
+      this.particles.splice(i, 1);
+    }
+  }
+};
+
+function keyPressed() {
+  if (keyCode == DOWN_ARROW) {
+    if (length > 1) {
+      length--;
+    }
+  } else if (keyCode == UP_ARROW) {
+    if (length < 10) {
+      length++;
+    }
+  }
+  if (keyCode == LEFT_ARROW) {
+    if (widthToDraw > 1) {
+      widthToDraw--;
+    }
+  } else if (keyCode == RIGHT_ARROW) {
+    if (widthToDraw < 10) {
+      widthToDraw++;
+    }
+  }
+}
