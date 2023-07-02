@@ -1,0 +1,209 @@
+let song1, song2;
+let c;
+let playToggle = false;
+var cnv, soundFile, fft, peakDetect;
+var ellipseWidth = 10;
+var volhistory = [];
+let system;
+function preload(){
+  song1 = loadSound("TheWorstPolyphia.mp3");  
+  //song2 = loadSound();
+}
+function setup() {
+  let cnv = createCanvas(400,400);
+  cnv.mouseClicked(togglePlay);
+  amplitude = new p5.Amplitude();
+  system = new ParticleSystem(createVector(width / 2, height/2));
+}
+
+function draw() {
+  background(220);
+  text('tap to play', 20, 20);
+  
+  system.addParticle();
+  system.run();
+  
+  stroke(255,0,0);
+  let level = amplitude.getLevel();
+  let size = map(level, 0, 1, 0, 200);
+  //print(size)
+  if(size <=20){
+    c = color(0, 0, size*6);
+  }
+  else if(size <= 35 && size > 20){
+    c = color(0, size*4, 0);
+  }
+  else{
+    c = color(size*4, 0, 0);
+  }
+  
+  fill(c);
+  ellipse(width/2, height/2, size, size);
+  
+  
+  //https://www.youtube.com/watch?v=jEwAMgcCgOA
+  //  used this as reference
+  //  removed some things and changed a couple values
+  var vol = amplitude.getLevel();
+  volhistory.push(vol);
+  stroke(255);
+  noFill();
+  push();
+  var currentY = map(vol, 0, 0.5, height, 0);
+  translate(0, height / 2 - currentY);
+  beginShape();
+  for (var i = 0; i < volhistory.length; i++) {
+    var y = map(volhistory[i], 0, 1, height, 0);
+    stroke(0,0,0)
+    vertex(i, y);
+  }
+  endShape();
+  pop();
+  if (volhistory.length > width) {  //origionally had -50 after width
+    volhistory.splice(0, 1);
+  }
+
+  stroke(255, 0, 0);
+  //line(volhistory.length, 0, volhistory.length, height);
+  
+}
+
+function togglePlay() {
+  if (song1.isPlaying() ){
+    song1.pause();
+  } else {
+    song1.loop();
+		amplitude = new p5.Amplitude();
+		amplitude.setInput(song1);
+  }
+}
+
+//https://p5js.org/examples/simulate-particle-system.html
+//  used this as reference and then changed it so that it doesn't just go down
+//  also expriemented with colors but ended up scratching that
+//    didn't want to flashbang someones eyes
+// A simple Particle class
+let Particle = function(position) {
+  this.acceleration = createVector(0, random(-0.05,0.05));
+  this.velocity = createVector(random(-1, 1), random(-1, 1));
+  this.position = position.copy();
+  this.lifespan = 255;
+};
+
+Particle.prototype.run = function() {
+  this.update();
+  this.display();
+};
+
+// Method to update position
+Particle.prototype.update = function(){
+  this.velocity.add(this.acceleration);
+  this.position.add(this.velocity);
+  this.lifespan -= 2;
+};
+
+// Method to display
+Particle.prototype.display = function() {
+  stroke(200, this.lifespan);
+  strokeWeight(2);
+  fill(127, this.lifespan);
+  ellipse(this.position.x, this.position.y, 12, 12);
+};
+
+// Is the particle still useful?
+Particle.prototype.isDead = function(){
+  return this.lifespan < 0;
+};
+
+let ParticleSystem = function(position) {
+  this.origin = position.copy();
+  this.particles = [];
+};
+
+ParticleSystem.prototype.addParticle = function() {
+  this.particles.push(new Particle(this.origin));
+};
+
+ParticleSystem.prototype.run = function() {
+  for (let i = this.particles.length-1; i >= 0; i--) {
+    let p = this.particles[i];
+    p.run();
+    if (p.isDead()) {
+      this.particles.splice(i, 1);
+    }
+  }
+};
+
+/*
+function setup() {
+  background(0);
+  noStroke();
+  fill(255);
+  textAlign(CENTER);
+
+  // p5.PeakDetect requires a p5.FFT
+  fft = new p5.FFT();
+  peakDetect = new p5.PeakDetect();
+}
+
+function draw() {
+  background(0);
+  text('click to play/pause', width/2, height/2);
+
+  // peakDetect accepts an fft post-analysis
+  fft.analyze();
+  peakDetect.update(fft);
+
+  if ( peakDetect.isDetected ) {
+    ellipseWidth = 50;
+  } else {
+    ellipseWidth *= 0.95;
+  }
+
+  ellipse(width/2, height/2, ellipseWidth, ellipseWidth);
+}
+
+// toggle play/stop when canvas is clicked
+function mouseClicked() {
+  if (mouseX > 0 && mouseX < width && mouseY > 0 && mouseY < height) {
+    if (song1.isPlaying() ) {
+      song1.stop();
+    } else {
+      song1.play();
+    }
+  }
+}
+*/
+/*
+function setup() {
+  let cnv = createCanvas(100, 100);
+  cnv.mousePressed(canvasPressed);
+  song1.setVolume(0.3);
+  //song2.setVolume(0.3);
+}
+
+function draw() {
+  background(220);
+}
+function canvasPressed(){
+  if(!playToggle){
+    song1.play();
+    //song2.play();
+  }
+  else{
+    song1.stop();
+    //song2.stop();
+  }
+  playToggle = !playToggle;
+}
+
+
+function keyPressed(e){
+  console.log('keyVal ', e.key)
+  switch(e.key){
+    case a: 
+      song2.play();
+      break;
+  }
+}
+*/
